@@ -1,0 +1,115 @@
+# src/modules/compiler/compiler.schema.graphql
+
+# ── Compiler (Language) type ──────────────────────────────────────────────────
+
+type Compiler {
+  id: ID!
+
+  # Human-readable language name (e.g. "Python", "JavaScript")
+  name: String!
+
+  # Whether this language is shown to learners in the code editor
+  active: Boolean!
+
+  # Logo URL — set via the image upload system
+  logo: String
+
+  # All other language config fields merged into a JSON string
+  # (mode, extension, version, properties, etc.)
+  # The frontend can JSON.parse() this to get the full config object.
+  configJson: String
+
+  createdAt: String
+  updatedAt: String
+}
+
+# ── Inputs ────────────────────────────────────────────────────────────────────
+
+input CreateCompilerInput {
+  # Required
+  name: String!
+
+  # Optional known fields
+  active: Boolean
+  logo: String
+
+  # Open-ended config fields — pass as individual scalars or use configJson
+  # to send a JSON string of the full config object.
+  # Any field not listed here is stored in the Mixed config map.
+  mode:      String
+  extension: String
+  version:   String
+
+  # Arbitrary JSON string — merged on top of individual fields above.
+  # Useful for bulk-pasting a full language config from the frontend.
+  configJson: String
+}
+
+input UpdateCompilerInput {
+  name:      String
+  active:    Boolean
+  logo:      String
+  mode:      String
+  extension: String
+  version:   String
+
+  # Same as CreateCompilerInput — JSON string of arbitrary config fields.
+  configJson: String
+}
+
+input CompilerFiltersInput {
+  # Filter by active status
+  active: Boolean
+
+  # Case-insensitive name search
+  search: String
+}
+
+# ── Pagination ────────────────────────────────────────────────────────────────
+
+type CompilerEdge {
+  cursor: String!
+  node: Compiler!
+}
+
+type CompilerConnection {
+  edges: [CompilerEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+# ── Delete payload ────────────────────────────────────────────────────────────
+
+type DeleteCompilerPayload {
+  success: Boolean!
+  message: String!
+  id: ID!
+}
+
+# ── Queries ───────────────────────────────────────────────────────────────────
+
+type Query {
+  # Get a single language by ID
+  compiler(id: ID!): Compiler
+
+  # Paginated list — for the CMS management table
+  compilers(
+    filters: CompilerFiltersInput
+    first:   Int
+    after:   String
+  ): CompilerConnection!
+
+  # Full unpaginated list — for the frontend code editor language selector
+  allCompilers(onlyActive: Boolean): [Compiler!]!
+}
+
+# ── Mutations ─────────────────────────────────────────────────────────────────
+
+type Mutation {
+  createCompiler(input: CreateCompilerInput!): Compiler!
+  updateCompiler(id: ID!, input: UpdateCompilerInput!): Compiler!
+  deleteCompiler(id: ID!): DeleteCompilerPayload!
+
+  # Quick toggle without a full update — for the active switch in the card menu
+  toggleCompilerActive(id: ID!, active: Boolean!): Compiler!
+}

@@ -2,6 +2,10 @@
 // CHANGED:
 //   1. createLessonService — passes section through (null = root level)
 //   2. getSidebarLessons — updated to use new sidebar repo function
+//   3. createLessonService — safe auto-save draft creation:
+//      - if course is missing, skip fullSlug generation and save without it
+//      - if slug is missing, generate a unique temp slug from title or uuid
+//      - fullSlug is only built when both course and slug are present
 
 import {
   findLesson,
@@ -38,20 +42,38 @@ export async function getRecentLessons(limit) {
 }
 
 export async function createLessonService(input) {
-  // section: null  → root level lesson
-  // section: id    → lesson inside that section
+  // ── Slug ───────────────────────────────────────────────────────────────────
+  // If no slug provided (auto-save fires before user fills the field),
+  // generate a unique temp slug from title or a random id so the unique
+  // index on { course, slug } never clashes with an empty string.
+  const slug =
+    input.slug?.trim() ||
+    (input.title
+      ? `${input.title
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '')}-${Date.now()}`
+      : `draft-${Date.now()}`);
 
-  const course = await findCourse({ id: input.course });
-  if (!course) throw new Error('Course not found');
- 
-  const fullSlug = `${course.slug}/${input.slug}`;
+  // ── fullSlug ───────────────────────────────────────────────────────────────
+  // Only build fullSlug when we actually have a course — otherwise leave it
+  // undefined so Mongoose does not store an empty / malformed value that
+  // would collide with the sparse unique index.
+  let fullSlug;
+  if (input.course) {
+    const course = await findCourse({ id: input.course });
+    if (course) {
+      fullSlug = `${course.slug}/${slug}`;
+    }
+  }
 
   const payload = {
     title: input.title,
-    slug: input.slug,
-    fullSlug,
+    slug,
+    ...(fullSlug !== undefined ? { fullSlug } : {}),
     description: input.description,
-    course: input.course,
+    course: input.course ?? null,
     section: input.section ?? null,
     type: input.type ?? 'single',
     order: input.order ?? 'a0',
@@ -64,15 +86,13 @@ export async function createLessonService(input) {
     },
   };
 
- 
-
   try {
     return await createLesson(payload);
   } catch (err) {
     if (err.code === 11000) {
       console.log('DUPLICATE KEY ERROR:', err.keyValue);
       throw new Error(
-        `A lesson with the slug "${input.slug}" already exists in this course`
+        `A lesson with the slug "${slug}" already exists in this course`
       );
     }
     throw err;
@@ -98,6 +118,12 @@ export async function updateLessonService(id, input) {
   // string id in input → move lesson to that section
   if ('section' in input) {
     payload.section = input.section ?? null;
+  }
+
+  // ── fullSlug — rebuild if course or slug changed ───────────────────────────
+  if (input.course && input.slug) {
+    const course = await findCourse({ id: input.course });
+    if (course) payload.fullSlug = `${course.slug}/${input.slug}`;
   }
 
   if (input.meta) {

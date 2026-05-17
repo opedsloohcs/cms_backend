@@ -8,6 +8,8 @@
 #   6. Removed parentId from all types (replaced by section)
 #   7. lessonSidebar now returns SidebarData (sections + rootLessons)
 #   8. Added SidebarSection, SidebarLesson, SidebarData types
+#   9. Removed required (!) from all fields except title in CreateLessonInput
+#      and LessonMetaInput
 
 scalar Date
 
@@ -86,22 +88,22 @@ type SidebarData {
 # ── Input types ───────────────────────────────────────────────────────────────
 
 input LessonMetaInput {
-  title: String!
-  description: String!
-  keywords: [String!]
+  title: String!             # required
+  description: String
+  keywords: [String]
 }
 
 input CreateLessonInput {
-  title: String!
-  slug: String!
+  title: String!             # required
+  slug: String
   description: String
-  course: ID!
+  course: ID
   section: ID              # null = root level, omit or pass null
   type: LessonType
   order: String            # fractional index string
   content: String
   isPublished: Boolean
-  meta: LessonMetaInput!
+  meta: LessonMetaInput
 }
 
 input UpdateLessonInput {

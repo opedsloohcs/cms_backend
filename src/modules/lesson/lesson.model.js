@@ -17,7 +17,7 @@ const lessonSchema = new mongoose.Schema(
     },
     slug: {
       type: String,
-      required: true,
+      // required: true,
       lowercase: true,
       trim: true,
     },
@@ -32,7 +32,7 @@ const lessonSchema = new mongoose.Schema(
     },
     course: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      // required: true,
       ref: 'Course',
     },
     // Optional section reference.
@@ -74,12 +74,12 @@ const lessonSchema = new mongoose.Schema(
     meta: {
       title: {
         type: String,
-        required: true,
+        // required: true,
         trim: true,
       },
       description: {
         type: String,
-        required: true,
+        // required: true,
       },
       keywords: [String],
     },
